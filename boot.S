@@ -54,9 +54,13 @@ load_inodes:
     movb        $NUM_INODE_BLOCKS, %cl
     call        read_blocks
 
-
     addw        $INODE_SIZE, %di
+        movw        %di, %ax
+        call        print_hex
     movw        I_BLOCK(%di), %ax
+        call        print_hex
+        jmp         halt
+
     pushw       %di
     movw        $0x9400, %di
     movb        $1, %cl
