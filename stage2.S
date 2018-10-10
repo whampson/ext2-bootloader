@@ -36,3 +36,37 @@ start_kernel:
     movl        0x1000, %eax
     calll       *%eax
     jmp         halt
+
+.globl print_hex
+print_hex:
+    pushl       %esi
+    pushw       %bx
+    pushw       %cx
+    movl        $5, %ecx
+    leal        s_hex, %esi
+_print_hex_loop:
+    movw        %ax, %bx
+    andb        $0x0F, %bl
+    cmpb        $9, %bl
+    ja          _print_hex_letter
+    addb        $0x30, %bl
+    jmp         _print_hex_char
+
+_print_hex_letter:
+    addb        $0x37, %bl
+
+_print_hex_char:
+    movb        %bl, (%esi, %ecx)
+    rorw        $4, %ax
+    decl        %ecx
+    cmpl        $1, %ecx
+    ja          _print_hex_loop
+    call        print
+    popw        %cx
+    popw        %bx
+    popl        %esi
+    ret
+
+s_hex:
+    .ascii      "0xXXXX"
+    .byte       13, 10, 0
