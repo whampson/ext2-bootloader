@@ -1,5 +1,7 @@
 #include "boot.h"
 
+RETRY_COUNT = 3
+
 .section .stage1, "ax", @progbits
 .code16
 
@@ -55,12 +57,7 @@ load_inodes:
     call        read_blocks
 
     addw        $INODE_SIZE, %di
-        movw        %di, %ax
-        call        print_hex
     movw        I_BLOCK(%di), %ax
-        call        print_hex
-        jmp         halt
-
     pushw       %di
     movw        $0x9400, %di
     movb        $1, %cl
@@ -173,15 +170,26 @@ read_blocks:
 ##
 .globl read_sectors
 read_sectors:
+    pushw       %si
     pushw       %cx                 # save count
     call        lba2chs
     popw        %ax                 # restore count (goes in %al)
+    movw        $RETRY_COUNT, %si
+
+_read_sectors_loop:
+    decw        %si
     movw        %di, %bx
     movb        d_diskno, %dl
     movb        $READ_FLOPPY, %ah
     int         $0x13
-    jc          diskerr
+    jc          _read_sectors_err
+    popw        %si
     ret
+
+_read_sectors_err:
+    cmpw        $0, %si
+    je          diskerr
+    jmp         _read_sectors_loop
 
 
 ##
