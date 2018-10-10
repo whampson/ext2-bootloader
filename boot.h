@@ -1,5 +1,30 @@
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*
+ * Copyright (C) 2018 Wes Hampson. All Rights Reserved.                       *
+ *                                                                            *
+ * This is free software: you can redistribute it and/or modify               *
+ * it under the terms of version 2 of the GNU General Public License          *
+ * as published by the Free Software Foundation.                              *
+ *                                                                            *
+ * See LICENSE in the top-level directory for a copy of the license.          *
+ * You may also visit <https://www.gnu.org/licenses/gpl-2.0.txt>.             *
+ *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*-----------------------------------------------------------------------------
+ *   File: boot.h
+ * Author: Wes Hampson
+ *----------------------------------------------------------------------------*/
+
 #ifndef __BOOT_H
 #define __BOOT_H
+
+#define BIOS_TTY_OUTPUT     0x0E    /* int 10h */
+#define BIOS_READ_DISK      0x02    /* int 13h */
+
+#define RETRY_COUNT         3
+#define SECT_PER_CYL        18
+
+#define BLOCK_SIZE          1024
+#define EXT2_SUPER_MAGIC    0xEF53
 
 #define STAGE2_BASE         0x7E00
 #define STAGE2_SECTOR       1
@@ -9,30 +34,37 @@
 #define SUPER_BLOCK_SECTOR  2
 #define SUPER_BLOCK_SECTORS 2
 
-/* struct ext2_super_block fields */
+#define GROUP_DESC_BASE     0x8400
+#define GROUP_DESC_BLOCK    2
+#define GROUP_DESC_COUNT    1
+
+#define INODE_TABLE_BASE    0x1000
+#define INODE_COUNT         184
+#define INODE_SIZE          128
+#define INODE_BLOCKS        (INODE_COUNT / (BLOCK_SIZE / INODE_SIZE))
+
+#define ROOT_DENTRY_BASE    0x8800
+#define ROOT_DENTRY_INODE   2
+#define ROOT_DENTRY_COUNT   1   /* TODO: read this value from inode */
+
+#define TMP_BUF             0x9000
+
+#define KERNEL_BASE         0xA000
+
+/* struct ext2_super_block field offsets */
 #define S_LOG_BLOCK_SIZE    24
 #define S_INODES_PER_GROUP  40
 #define S_MAGIC             56
 
-#define EXT2_SUPER_MAGIC    0xEF53
-
-#define GROUP_DESC_BASE     0x9000
-#define GROUP_DESC_BLOCK    2
-
-/* struct ext2_group_desc fields */
+/* struct ext2_group_desc field offsets */
 #define BG_INODE_TABLE      8
 
-#define INODE_TABLE_BASE    0xA000
-#define NUM_INODES          184
-#define INODE_SIZE          128
-#define NUM_INODE_BLOCKS    (NUM_INODES / (1024 / INODE_SIZE))
-
-/* struct ext2_inode fields */
+/* struct ext2_inode field offsets */
 #define I_SIZE              4
 #define I_BLOCKS            28
 #define I_BLOCK             40
 
-/* struct ext2_dir_entry_2 fields */
+/* struct ext2_dir_entry_2 field offsets */
 #define INODE               0
 #define REC_LEN             4
 #define NAME_LEN            6
