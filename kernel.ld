@@ -20,7 +20,7 @@ ENTRY(kmain)
 
 SECTIONS
 {
-    .text 0xA000 :
+    .text 0xA000 :      /* KERNEL_BASE from boot.h */
     {
         LONG(kmain)     /* kernel entry point, needed for indirect jump */
         *(.text*)
