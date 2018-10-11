@@ -1,41 +1,81 @@
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*
+ * Copyright (C) 2018 Wes Hampson. All Rights Reserved.                       *
+ *                                                                            *
+ * This is free software: you can redistribute it and/or modify               *
+ * it under the terms of version 2 of the GNU General Public License          *
+ * as published by the Free Software Foundation.                              *
+ *                                                                            *
+ * See LICENSE in the top-level directory for a copy of the license.          *
+ * You may also visit <https://www.gnu.org/licenses/gpl-2.0.txt>.             *
+ *~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*-----------------------------------------------------------------------------
+ *   File: stage2.S
+ * Author: Wes Hampson
+ *----------------------------------------------------------------------------*/
+
 #include "boot.h"
 
 .section .stage2, "ax", @progbits
 .code16
 
-.globl load_file
-load_file:
-    popw        %di
-    movw        INODE(%di), %bx
-    decw        %bx
-    movl        $INODE_TABLE_BASE, %esi
-    movl        $INODE_SIZE, %eax
-    mulw        %bx
-    addl        %eax, %esi
-    xorl        %edx, %edx
-
-_load_loop:
-    movl        I_BLOCKS(%esi), %eax
-    shrl        $1, %eax
-    cmpl        %eax, %edx
-    jae         start_kernel
-    movw        I_BLOCK(%esi, %edx, 4), %ax
-    movw        $0x1000, %di
-    movb        $1, %cl
-    pushl       %esi
-    pushl       %edx
-    call        read_blocks
-    popl        %edx
-    popl        %esi
-    incl        %edx
-    jmp         _load_loop
-
+.globl stage2
+stage2:
 # TODO: enter protected mode
 
 start_kernel:
-    movl        0x1000, %eax
+    movl        KERNEL_BASE, %eax
     calll       *%eax
     jmp         halt
+
+
+## ===== SUBROUTINES =====
+
+##
+# Compares two strings.
+#
+#   Inputs: si - pointer to string 1
+#           di - pointer to string 2
+#  Outputs: ax - comparison result
+#                < 0: str1 < str2
+#                > 0: str1 > str2
+#                = 0: str1 = str2
+# Clobbers: si, di
+##
+.globl strcmp
+strcmp:
+    pushw       %dx
+_strcmp_loop:
+    cmpb        $0, (%si)
+    je          _strcmp_less
+    movb        (%si), %dl
+    cmpb        %dl, (%di)
+    jb          _strcmp_less
+    ja          _strcmp_more
+    cmpb        $0, %dl
+    je          _strcmp_done
+    incw        %si
+    incw        %di
+    jmp         _strcmp_loop
+
+_strcmp_less:
+    cmpb        $0, (%di)
+    je          _strcmp_equal
+    movw        $-1, %ax
+    jmp         _strcmp_done
+
+_strcmp_more:
+    movw        $1, %ax
+    jmp         _strcmp_done
+
+_strcmp_equal:
+    xorw        %ax, %ax
+
+_strcmp_done:
+    popw        %dx
+    ret
+
+
 
 .globl print_hex
 print_hex:
@@ -66,6 +106,8 @@ _print_hex_char:
     popw        %bx
     popl        %esi
     ret
+
+## ===== DATA =====
 
 s_hex:
     .ascii      "0xXXXX"
