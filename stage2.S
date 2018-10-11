@@ -16,19 +16,51 @@
 
 #include "boot.h"
 
+PIC_M_CMD   = 0x21
+PIC_S_CMD   = 0xA1
+
+KERNEL_CS   = 0x08
+KERNEL_DS   = 0x10
+
 .section .stage2, "ax", @progbits
 .code16
 
 .globl stage2
 stage2:
+    # kill interrupts
+    cli
+    movb        $0xFF, %al
+    outb        %al, $PIC_M_CMD
+    outb        %al, $PIC_S_CMD
+
+    # enable A20
     call        a20_enable
-# TODO: enter protected mode
 
-start_kernel:
+    # enter Protected Mode
+    lgdt        d_gdt_ptr
+    movl        %cr0, %eax
+    orl         $0x01, %eax
+    movl        %eax, %cr0
+    ljmp        $KERNEL_CS, $entry32
+
+.code32
+entry32:
+    movw        $KERNEL_DS, %ax
+    movw        %ax, %ds
+    movw        %ax, %es
+    movw        %ax, %fs
+    movw        %ax, %gs
+    movw        %ax, %ss
+    movl        $0x40000, %ebp
+    movl        %ebp, %esp
+
+_start_kernel:
     movl        KERNEL_BASE, %eax
-    calll       *%eax
-    jmp         halt
+    call        *%eax
 
+_halt:
+    hlt
+    jmp         _halt
 
 ## ===== SUBROUTINES =====
 
@@ -39,6 +71,7 @@ start_kernel:
 #  Outputs: di  - inode base address
 # Clobbers: ax, dx
 ##
+.code16
 .globl get_inode_addr
 get_inode_addr:
     cmpw        $1, %ax
@@ -130,6 +163,19 @@ _print_hex_char:
     ret
 
 ## ===== DATA =====
+
+.align 16
+gdt_base:
+    .quad       0x0000000000000000  # (null entry)
+    .quad       0x00CF9A000000FFFF  # KERNEL_CS = 0x08
+    .quad       0x00CF92000000FFFF  # KERNEL_DS = 0x10
+gdt_limit:
+
+.align 4
+d_gdt_ptr:
+    .word       gdt_limit - gdt_base - 1
+    .long       gdt_base
+    .word       0
 
 s_hex:
     .ascii      "0xXXXX"
