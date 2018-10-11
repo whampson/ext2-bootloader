@@ -15,7 +15,7 @@
  *   Desc: A sample "kernel".
  *----------------------------------------------------------------------------*/
 
-__asm__ (".code16gcc\n");
+#define VIDMEM  0xB8000
 
 void print(char *s)
 {
@@ -38,7 +38,19 @@ void print(char *s)
     );
 }
 
+void clear_screen(void)
+{
+    char *vid_mem;
+    int i;
+
+    vid_mem = (char *) VIDMEM;
+    for (i = 0; i < 80 * 25; i++) {
+        vid_mem[i * 2] = '\0';
+    }
+}
+
 void kmain(void)
 {
-    print("Welcome to the kernel! :-)\r\n");
+    clear_screen();
+    /* print("Welcome to the 32-bit kernel! :-)\r\n"); */
 }
