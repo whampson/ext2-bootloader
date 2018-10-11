@@ -159,15 +159,6 @@ _load_kernel_done:
 ## ===== SUBROUTINES =====
 
 ##
-# Halts the system; spins forever... and ever.
-##
-.globl halt
-halt:
-    hlt
-    jmp         halt
-
-
-##
 # Prints a zero-terminated string to the screen at the current cursor position.
 #
 #   Inputs: si - address of string to print
@@ -316,8 +307,10 @@ filenotfound:
 
 _fail:
     call        print
-    jmp         halt
 
+_halt:
+    hlt
+    jmp         _halt
 
 ## ===== DATA =====
 
