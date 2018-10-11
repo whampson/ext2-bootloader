@@ -12,6 +12,9 @@
 /*-----------------------------------------------------------------------------
  *   File: boot.S
  * Author: Wes Hampson
+ *   Desc: Stage 1 of the bootloader. Stage 1 is responsible for loading the
+ *         kernel image into memory from the disk. It also contains some useful
+ *         subroutines.
  *----------------------------------------------------------------------------*/
 
 #include "boot.h"
@@ -75,11 +78,21 @@ _load_inodes:
     # load the inode table into memory
     movw        BG_INODE_TABLE(%di), %ax    # first inode block index
     movw        $INODE_TABLE_BASE, %di
-    movb        $9, %cl                     # TODO: can't load all in one pass,
-    call        read_blocks                 #   num sectors is too big
+    movw        $INODE_BLOCKS, %cx
+_load_inodes_loop:
+    pushw       %ax
+    pushw       %cx
+    movb        $1, %cl
+    call        read_blocks
+    popw        %cx
+    popw        %ax
+    incw        %ax
+    addw        $BLOCK_SIZE, %di
+    loop        _load_inodes_loop
 
+_load_root_dentry:
     # load root directory entry
-    #   TODO: this only loads one block, there might be more if there enough
+    #   TODO: this only loads one block, there might be more if there are enough
     #         files on disk
     movw        $ROOT_DENTRY_INODE, %ax
     call        get_inode_addr
@@ -89,12 +102,15 @@ _load_inodes:
     movb        $1, %cl
     call        read_blocks
 
-    movw        %di, %bx            # dentry record ptr
-    xorw        %dx, %dx            # data block index
+    # Need to zero-out the upper bits of ebx and edx here
+    # because all 32 bits are used later in a memory address displacement
+    xorl        %edx, %edx              # data block index
+    xorl        %ebx, %ebx              # data block index
+    movw        %di, %bx                # dentry record ptr
 
 _find_kernel:
     # locate the kernel image
-    cmpw        0(%esp), %ax         # inode size
+    cmpw        4(%bp), %ax            # inode size
     jae         filenotfound
     cmpw        $0, INODE(%bx)
     je          filenotfound
@@ -109,8 +125,8 @@ _find_kernel:
     cmpw        $0, %ax
     je          _load_kernel
     movw        REC_LEN(%bx), %ax
-    addw        %ax, %bx            # next record pointer
-    addw        %ax, %dx            # increment data block index
+    addw        %ax, %bx                # next record pointer
+    addw        %ax, %dx                # increment data block index
     jmp         _find_kernel
 
 _load_kernel:
@@ -126,7 +142,6 @@ _load_kernel:
     movw        I_BLOCKS(%bx), %si
     xorw        %dx, %dx
     movw        $KERNEL_BASE, %di
-
 _load_kernel_loop:
     cmpw        %si, %dx
     jae         _load_kernel_done
@@ -136,9 +151,9 @@ _load_kernel_loop:
     incw        %dx
     addw        $BLOCK_SIZE, %di
     jmp         _load_kernel_loop
-
 _load_kernel_done:
     jmp         stage2
+
 
 ## ===== SUBROUTINES =====
 
@@ -172,27 +187,6 @@ _print_loop:
     jmp         _print_loop
 
 _print_done:
-    ret
-
-
-##
-# Gets the base address of an inode.
-#
-#   Inputs: ax  - inode number
-#  Outputs: di  - inode base address
-# Clobbers: ax, dx
-##
-.globl get_inode_addr
-get_inode_addr:
-    cmpw        $1, %ax
-    jb          badfs
-    cmpw        $INODE_COUNT, %ax
-    ja          badfs
-    movw        $INODE_TABLE_BASE, %di
-    decw        %ax
-    movw        $INODE_SIZE, %dx
-    mulw        %dx
-    addw        %ax, %di
     ret
 
 
@@ -299,22 +293,18 @@ lba2chs:
 
 ## ===== FAIL ROUTINES =====
 
-.globl diskerr
 diskerr:
     leaw        s_diskerr, %si
     jmp         _fail
 
-.globl diskinval
 diskinval:
     leaw        s_diskinval, %si
     jmp         _fail
 
-.globl badfs
 badfs:
     leaw        s_badfs, %si
     jmp         _fail
 
-.globl filenotfound
 filenotfound:
     leaw        s_kernelnotfound, %si
     jmp         _fail
