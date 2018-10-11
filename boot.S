@@ -94,6 +94,7 @@ _load_root_dentry:
     # load root directory entry
     #   TODO: this only loads one block, there might be more if there are enough
     #         files on disk
+    #   SOLUTION: make a generic 'load_file' function
     movw        $ROOT_DENTRY_INODE, %ax
     call        get_inode_addr
     movw        I_BLOCK(%di), %ax
@@ -293,18 +294,22 @@ lba2chs:
 
 ## ===== FAIL ROUTINES =====
 
+.globl diskerr
 diskerr:
     leaw        s_diskerr, %si
     jmp         _fail
 
+.globl diskinval
 diskinval:
     leaw        s_diskinval, %si
     jmp         _fail
 
+.globl badfs
 badfs:
     leaw        s_badfs, %si
     jmp         _fail
 
+.globl filenotfound
 filenotfound:
     leaw        s_kernelnotfound, %si
     jmp         _fail
