@@ -19,34 +19,35 @@
 .section .stage1, "ax", @progbits
 .code16
 
+##
+# Bootloader entry point.
+# Loads the second stage of the bootloader and the kernel image into memory.
+##
 .globl entry
 entry:
     cld
-    ljmp        $0, $set_regs           # load %cs
-
-set_regs:
-    # load segment registers and set up the stack
     xorw        %ax, %ax
     movw        %ax, %ds
     movw        %ax, %es
     movw        %ax, %ss
     movw        $0x7C00, %bp
     movw        %bp, %sp
+    ljmp        $0, $_check_boot_disk       # load %cs
 
-check_boot_disk:
+_check_boot_disk:
     # ensure we booted from a floppy (since that's all we support)
     cmpb        $1, %dl
     ja          diskinval
     movb        %dl, d_diskno
 
-load_stage2:
+_load_stage2:
     # load stage 2 of the bootloader into memory
     movw        $STAGE2_BASE, %di
     movw        $STAGE2_SECTOR, %ax
     movb        $STAGE2_SECTORS, %cl
     call        read_sectors
 
-load_super_block:
+_load_super_block:
     # read the superblock into memory
     movw        $SUPER_BLOCK_BASE, %di
     movw        $SUPER_BLOCK_SECTOR, %ax
@@ -63,14 +64,14 @@ load_super_block:
     cmpb        $0, %cl
     ja          badfs
 
-load_group_desc:
+_load_group_desc:
     # load block group descriptor
     movw        $GROUP_DESC_BASE, %di
     movw        $GROUP_DESC_BLOCK, %ax
     movb        $GROUP_DESC_COUNT, %cl
     call        read_blocks
 
-load_inodes:
+_load_inodes:
     # load the inode table into memory
     movw        BG_INODE_TABLE(%di), %ax    # first inode block index
     movw        $INODE_TABLE_BASE, %di
@@ -91,7 +92,7 @@ load_inodes:
     movw        %di, %bx            # dentry record ptr
     xorw        %dx, %dx            # data block index
 
-find_kernel:
+_find_kernel:
     # locate the kernel image
     cmpw        0(%esp), %ax         # inode size
     jae         filenotfound
@@ -106,12 +107,38 @@ find_kernel:
     leaw        s_kernelimg, %di
     call        strcmp
     cmpw        $0, %ax
-    je          load_kernel         # in stage 2
+    je          _load_kernel
     movw        REC_LEN(%bx), %ax
     addw        %ax, %bx            # next record pointer
     addw        %ax, %dx            # increment data block index
-    jmp         find_kernel
+    jmp         _find_kernel
 
+_load_kernel:
+    pushw       %bx
+    leaw        s_loading, %si
+    call        print
+    popw        %bx
+    movw        INODE(%bx), %ax         # dentry ptr from find_kernel in bx
+    call        get_inode_addr
+    movw        %di, %bx
+    movl        I_SIZE(%bx), %edx
+    movl        %edx, d_kernelsize
+    movw        I_BLOCKS(%bx), %si
+    xorw        %dx, %dx
+    movw        $KERNEL_BASE, %di
+
+_load_kernel_loop:
+    cmpw        %si, %dx
+    jae         _load_kernel_done
+    movw        I_BLOCK(%ebx, %edx, 4), %ax
+    movb        $1, %cl
+    call        read_blocks
+    incw        %dx
+    addw        $BLOCK_SIZE, %di
+    jmp         _load_kernel_loop
+
+_load_kernel_done:
+    jmp         stage2
 
 ## ===== SUBROUTINES =====
 
@@ -149,6 +176,27 @@ _print_done:
 
 
 ##
+# Gets the base address of an inode.
+#
+#   Inputs: ax  - inode number
+#  Outputs: di  - inode base address
+# Clobbers: ax, dx
+##
+.globl get_inode_addr
+get_inode_addr:
+    cmpw        $1, %ax
+    jb          badfs
+    cmpw        $INODE_COUNT, %ax
+    ja          badfs
+    movw        $INODE_TABLE_BASE, %di
+    decw        %ax
+    movw        $INODE_SIZE, %dx
+    mulw        %dx
+    addw        %ax, %di
+    ret
+
+
+##
 # Reads one or more blocks from the boot disk.
 #
 #   Inputs: es:di - destination address
@@ -162,7 +210,7 @@ read_blocks:
     # sect_count = block_count << (log_block_size + 1)
     # sect_start = 2 + ((block_start - 1) << (log_block_size + 1))
     cmpw        $0, %ax
-    jle         badblock
+    jle         badfs
     movb        %cl, %dl
     movb        $1, %cl
     shlb        %cl, %dl
@@ -172,26 +220,6 @@ read_blocks:
     movb        %dl, %cl
     call        read_sectors
     shrw        $1, %ax
-    ret
-
-
-##
-# Gets the base address of an inode.
-#
-#   Inputs: ax  - inode number
-#  Outputs: di  - inode base address
-# Clobbers: ax, dx
-##
-get_inode_addr:
-    cmpw        $1, %ax
-    jb          badinode
-    cmpw        $INODE_COUNT, %ax
-    ja          badinode
-    movw        $INODE_TABLE_BASE, %di
-    decw        %ax
-    movw        $INODE_SIZE, %dx
-    mulw        %dx
-    addw        %ax, %di
     ret
 
 
@@ -271,28 +299,24 @@ lba2chs:
 
 ## ===== FAIL ROUTINES =====
 
+.globl diskerr
 diskerr:
     leaw        s_diskerr, %si
     jmp         _fail
 
+.globl diskinval
 diskinval:
     leaw        s_diskinval, %si
     jmp         _fail
 
+.globl badfs
 badfs:
     leaw        s_badfs, %si
     jmp         _fail
 
-badblock:
-    leaw        s_badblock, %si
-    jmp         _fail
-
-badinode:
-    leaw        s_badinode, %si
-    jmp         _fail
-
+.globl filenotfound
 filenotfound:
-    leaw        s_filenotfound, %si
+    leaw        s_kernelnotfound, %si
     jmp         _fail
 
 _fail:
@@ -305,12 +329,19 @@ _fail:
 d_diskno:
     .byte           0
 
+d_kernelsize:
+    .long           0
+
 s_kernelimg:
     .ascii          "kernel"
     .byte           0
 
+s_loading:
+    .ascii          "Loading kernel..."
+    .byte           13, 10, 0
+
 s_diskinval:
-    .ascii          "Invalid disk type!"
+    .ascii          "Use a floppy!"
     .byte           0
 
 s_diskerr:
@@ -321,14 +352,6 @@ s_badfs:
     .ascii          "Bad file system!"
     .byte           0
 
-s_badblock:
-    .ascii          "Bad block index!"
-    .byte           0
-
-s_badinode:
-    .ascii          "Bad inode index!"
-    .byte           0
-
-s_filenotfound:
-    .ascii          "OS not found!"
+s_kernelnotfound:
+    .ascii          "Kernel not found!"
     .byte           0
