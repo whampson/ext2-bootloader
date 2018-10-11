@@ -21,6 +21,7 @@
 
 .globl stage2
 stage2:
+    call        a20_enable
 # TODO: enter protected mode
 
 start_kernel:
@@ -30,6 +31,27 @@ start_kernel:
 
 
 ## ===== SUBROUTINES =====
+
+##
+# Gets the base address of an inode.
+#
+#   Inputs: ax  - inode number
+#  Outputs: di  - inode base address
+# Clobbers: ax, dx
+##
+.globl get_inode_addr
+get_inode_addr:
+    cmpw        $1, %ax
+    jb          badfs
+    cmpw        $INODE_COUNT, %ax
+    ja          badfs
+    movw        $INODE_TABLE_BASE, %di
+    decw        %ax
+    movw        $INODE_SIZE, %dx
+    mulw        %dx
+    addw        %ax, %di
+    ret
+
 
 ##
 # Compares two strings.
