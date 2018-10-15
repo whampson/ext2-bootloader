@@ -3,14 +3,34 @@ An ext2-compatible bootloader for i386 PCs.
 
 **Note: Only supports 1.44 MB floppies (3.5in).**
 
-This bootloader does the following:
+## Overview
   * Searches the disk for a kernel image by name
   * Loads the image at a known address below 1 MiB
   * Drops into a 32-bit kernel in Protected Mode
       * GDT loaded at a well-known address
       * inode table loaded at a well-known address
       * Interrupts disabled on the PICs
-      * Access to all 4 GiB of address space
+      * Access to all 4 GiB of address space in Protected Mode (ring 0)
+
+## Building
+First, we need to make an ext2 floppy image. This only needs to be done once.
+
+        $ make img
+
+Now, build the bootloader and sample kernel.
+
+        $ make
+
+You can also build the kernel and bootloader separately.
+
+        $ make bootldr
+        $ make kernel
+
+
+## QEMU Instructions
+Run the following command to boot the disk image with QEMU.
+
+        $ qemu-system-i386 -drive if=floppy,file=floppy.img
 
 ## Floppy Disk Instructions
 1) To write the disk image to a real floppy disk, execute the following command
