@@ -49,18 +49,12 @@ _a20_enable_loop:
     jmp     _a20_enable_loop
 
 _a20_enable_fail:
-    leaw    s_a20_enable_fail, %bx
-    call    print
-    movw    $-1, %ax
-    ret
+    leaw    s_enablefail, %si
+    jmp     fail
 
 _a20_enable_success:
     movw    $0, %ax
     ret
-
-s_a20_enable_fail:
-    .ascii  "Failed to enable A20 line!"
-    .byte   13, 10, 0
 
 _a20_enable_jmptbl:
     .word   a20_enablefunc_fast
@@ -182,3 +176,10 @@ _a20_test_done:
     popw    %cx
     popw    %bx
     ret
+
+## ===== DATA =====
+.section .data2
+
+s_enablefail:
+    .ascii  "A20 enable failed!"
+    .byte   0
