@@ -92,26 +92,18 @@ _load_inodes_loop:
 
 _load_root_dentry:
     # load root directory entry
-    #   TODO: this only loads one block, there might be more if there are enough
-    #         files on disk
-    #   SOLUTION: make a generic 'load_file' function
     movw        $ROOT_DENTRY_INODE, %ax
     call        get_inode_addr
-    movw        I_BLOCK(%di), %ax
-    pushw       I_SIZE(%di)
+    pushw       I_SIZE(%di)             # needed for traversing directory
+    movw        $ROOT_DENTRY_INODE, %ax
     movw        $ROOT_DENTRY_BASE, %di
-    movb        $1, %cl
-    call        read_blocks
-
-    # Need to zero-out the upper bits of ebx and edx here
-    # because all 32 bits are used later in a memory address displacement
-    xorl        %edx, %edx              # data block index
-    xorl        %ebx, %ebx              # data block index
-    movw        %di, %bx                # dentry record ptr
+    pushw       %di
+    call        load_file
+    popw        %bx                     # root dentry base address
 
 _find_kernel:
     # locate the kernel image
-    cmpw        4(%bp), %ax            # inode size
+    cmpw        -2(%bp), %ax            # inode size
     jae         filenotfound
     cmpw        $0, INODE(%bx)
     je          filenotfound
@@ -134,27 +126,12 @@ _load_kernel:
     pushw       %bx
     leaw        s_loading, %si
     call        print
-    popw        %bx
-    movw        INODE(%bx), %ax         # dentry ptr from find_kernel in bx
-    call        get_inode_addr
-    movw        %di, %bx
-    movl        I_SIZE(%bx), %edx
-    movl        %edx, d_kernelsize
-    movw        I_BLOCKS(%bx), %si
-    xorw        %dx, %dx
     movw        $KERNEL_BASE_SEG, %ax
     movw        %ax, %es
     movw        $KERNEL_BASE_OFF, %di
-_load_kernel_loop:
-    cmpw        %si, %dx
-    jae         _load_kernel_done
-    movw        I_BLOCK(%ebx, %edx, 4), %ax
-    movb        $1, %cl
-    call        read_blocks
-    incw        %dx
-    addw        $BLOCK_SIZE, %di
-    jmp         _load_kernel_loop
-_load_kernel_done:
+    popw        %bx                     # dentry ptr from find_kernel
+    movw        INODE(%bx), %ax
+    call        load_file
     jmp         stage2
 
 
@@ -218,10 +195,11 @@ read_blocks:
 #           ax    - disk sector base index (LBA)
 #           cl    - number of sectors to read
 #  Outputs: ax    - actual number of sectors read
-# Clobbers: bx, cx, dx, si
+# Clobbers: bx, cx, dx
 ##
 .globl read_sectors
 read_sectors:
+    pushw       %si
     pushw       %cx                 # save count
     call        lba2chs
     popw        %ax                 # restore count (goes in %al)
@@ -235,6 +213,7 @@ _read_sectors_loop:
     int         $0x13
     jc          _read_sectors_err
     movzbw      %al, %ax
+    popw        %si
     ret
 
 _read_sectors_err:
@@ -290,24 +269,25 @@ lba2chs:
 .globl diskerr
 diskerr:
     leaw        s_diskerr, %si
-    jmp         _fail
+    jmp         fail
 
 .globl diskinval
 diskinval:
     leaw        s_diskinval, %si
-    jmp         _fail
+    jmp         fail
 
 .globl badfs
 badfs:
     leaw        s_badfs, %si
-    jmp         _fail
+    jmp         fail
 
 .globl filenotfound
 filenotfound:
     leaw        s_kernelnotfound, %si
-    jmp         _fail
+    jmp         fail
 
-_fail:
+.globl fail
+fail:
     call        print
 
 _halt:
@@ -315,6 +295,7 @@ _halt:
     jmp         _halt
 
 ## ===== DATA =====
+.section .data1
 
 d_diskno:
     .byte           0
@@ -323,7 +304,7 @@ d_kernelsize:
     .long           0
 
 s_kernelimg:
-    .ascii          "kernel"
+    .ascii          "kernel"            # Kernel image filename
     .byte           0
 
 s_loading:
