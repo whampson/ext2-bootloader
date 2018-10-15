@@ -24,6 +24,8 @@ SECTIONS
     {
         LONG(kmain)     /* kernel entry point, needed for indirect jump */
         *(.text*)
+        . = (12 * 1024);
+        SHORT(0xBEEF)
     }
 
     .data :
