@@ -33,7 +33,7 @@ LD              := ld
 LFLAGS          :=
 
 # Source files
-BOOT_SRC        := boot.S stage2.S a20.S i8042.S    # boot.S MUST be first
+BOOT_SRC        := boot.S stage2.S a20.S    # boot.S MUST be first
 KERN_SRC        := kernel.c
 
 # Object files
