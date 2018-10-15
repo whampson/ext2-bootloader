@@ -19,9 +19,6 @@
 PIC_M_CMD   = 0x21
 PIC_S_CMD   = 0xA1
 
-KERNEL_CS   = 0x08
-KERNEL_DS   = 0x10
-
 .section .stage2, "ax", @progbits
 .code16
 
@@ -35,6 +32,15 @@ stage2:
 
     # enable A20
     call        a20_enable
+
+    # move GDT
+    xorl        %ax, %ax
+    movw        %ax, %es
+    leal        gdt_base, %esi
+    movl        $GDT_BASE, %edi
+    movzwl      d_gdt_ptr, %ecx
+    incl        %ecx
+    rep         movsb
 
     # enter Protected Mode
     lgdt        d_gdt_ptr
@@ -51,7 +57,7 @@ entry32:
     movw        %ax, %fs
     movw        %ax, %gs
     movw        %ax, %ss
-    movl        $0x40000, %ebp
+    movl        $KERNEL_STACK, %ebp
     movl        %ebp, %esp
 
 _start_kernel:
@@ -169,13 +175,13 @@ gdt_base:
     .quad       0x0000000000000000  # (null entry)
     .quad       0x00CF9A000000FFFF  # KERNEL_CS = 0x08
     .quad       0x00CF92000000FFFF  # KERNEL_DS = 0x10
-gdt_limit:
+gdt_end:
 
 .align 4
 d_gdt_ptr:
-    .word       gdt_limit - gdt_base - 1
-    .long       gdt_base
-    .word       0
+    .word       gdt_end - gdt_base - 1
+    .long       GDT_BASE
+    .word       0           # padding
 
 s_hex:
     .ascii      "0xXXXX"
