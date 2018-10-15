@@ -23,6 +23,7 @@ SECTIONS
     .stage1 0x7C00 : AT (0x0000)
     {
         *(.stage1)
+        *(.data1)
 
         ASSERT(. <= 0x01FE, "Stage 1 does not fit inside boot sector!");
 
@@ -33,6 +34,7 @@ SECTIONS
     .stage2 0x7E00 : AT (0x0200)
     {
         *(.stage2)
+        *(.data2)
 
         ASSERT(. <= 0x0200, "Stage 2 does not fit inside boot block!");
         . = 0x0200;
