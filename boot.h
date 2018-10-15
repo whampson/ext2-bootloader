@@ -17,6 +17,28 @@
 #ifndef __BOOT_H
 #define __BOOT_H
 
+
+/*******************************************
+ * Important stuff for kernel developers.
+ ******************************************/
+
+#define KERNEL_BASE_SEG     0x2000      /* 128 KiB */
+#define KERNEL_BASE_OFF     0x0000
+#define KERNEL_BASE         ((KERNEL_BASE_SEG << 4) + KERNEL_BASE_OFF)
+
+#define KERNEL_STACK        0x40000     /* 256 KiB */
+
+#define KERNEL_CS           0x08
+#define KERNEL_DS           0x10
+
+#define GDT_BASE            0x7000
+
+
+/*******************************************
+ * For those curious about booting.
+ * (These are not necessarily needed after landing in the kernel.)
+ ******************************************/
+
 #define BIOS_TTY_OUTPUT     0x0E    /* int 10h */
 #define BIOS_READ_DISK      0x02    /* int 13h */
 
@@ -45,11 +67,9 @@
 
 #define ROOT_DENTRY_BASE    0x8800
 #define ROOT_DENTRY_INODE   2
-#define ROOT_DENTRY_COUNT   1   /* TODO: read this value from inode */
+#define ROOT_DENTRY_COUNT   1           /* TODO: read this value from inode */
 
 #define TMP_BUF             0x9000
-
-#define KERNEL_BASE         0xA000
 
 /* struct ext2_super_block field offsets */
 #define S_LOG_BLOCK_SIZE    24
