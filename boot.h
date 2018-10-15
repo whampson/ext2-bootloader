@@ -64,10 +64,10 @@
 #define INODE_COUNT         184
 #define INODE_SIZE          128
 #define INODE_BLOCKS        (INODE_COUNT / (BLOCK_SIZE / INODE_SIZE))
+#define MAX_BLOCKS          12
 
 #define ROOT_DENTRY_BASE    0x8800
 #define ROOT_DENTRY_INODE   2
-#define ROOT_DENTRY_COUNT   1           /* TODO: read this value from inode */
 
 #define TMP_BUF             0x9000
 
