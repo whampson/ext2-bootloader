@@ -17,25 +17,6 @@
 #         The kernel is provided only for demonstration. You should be able to
 #         "slot-in" your own kernel with minimal modifications to the bootloader
 #         (e.g. kernel base address).
-#
-# FLOPPY DISK INSTRUCTIONS:
-#		  To write the disk image to a real floppy disk, execute the following
-#         command as root. Beware that this overwrites the ENTIRE floppy disk,
-# 		  so be sure to back it up!
-#	          $ dd if=floppy.img of=/dev/fd0 bs=512
-#
-#         The above command takes time and always re-writes the filesystem. If
-#		  you want to update only the bootloader and keep the filesystem intact,
-#         run the following command as root.
-#		      $ dd if=bootldr of=/dev/floppy bs=512 conv=notrunc
-#
-#		  If you want to update the kernel image, simply mount the disk and copy
-#         it over like you would any other file.
-#             $ mount /dev/fd0 /mnt
-#             $ cp kernel /mnt
-#             $ umount /mnt
-#
-#         Happy booting! :)
 #-------------------------------------------------------------------------------
 
 # Common compiler/assembler options
