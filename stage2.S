@@ -12,6 +12,9 @@
 /*-----------------------------------------------------------------------------
  *   File: stage2.S
  * Author: Wes Hampson
+ *   Desc: Stage 2 of the bootloader. Stage 1 is responsible for getting the
+ *         CPU into Protected Mode and calling the kernel. It also contains some
+ *         useful subroutines.
  *----------------------------------------------------------------------------*/
 
 #include "boot.h"
@@ -34,11 +37,11 @@ stage2:
     call        a20_enable
 
     # move GDT
-    xorl        %ax, %ax
+    xorw        %ax, %ax
     movw        %ax, %es
     leal        gdt_base, %esi
     movl        $GDT_BASE, %edi
-    movzwl      d_gdt_ptr, %ecx
+    movzwl      d_gdt_ptr, %ecx     # GDT size
     incl        %ecx
     rep         movsb
 
@@ -68,7 +71,8 @@ _halt:
     hlt
     jmp         _halt
 
-## ===== SUBROUTINES =====
+## ===== SUBROUTINES (16-bit) =====
+.code16
 
 ##
 # Gets the base address of an inode.
@@ -77,7 +81,6 @@ _halt:
 #  Outputs: di  - inode base address
 # Clobbers: ax, dx
 ##
-.code16
 .globl get_inode_addr
 get_inode_addr:
     cmpw        $1, %ax
@@ -90,6 +93,49 @@ get_inode_addr:
     mulw        %dx
     addw        %ax, %di
     ret
+
+##
+# Loads a file from the disk into memory.
+#
+# TODO: Support indirect block indexing.
+#
+#   Inputs: es:di - destination address
+#           ax    - inode number
+#  Outputs: file contents loaded at es:di
+# Clobbers: ax, ebx, cx, edx, si, di
+##
+.globl load_file
+load_file:
+    pushw       %di
+    call        get_inode_addr
+    movzwl      %di, %ebx
+    popw        %di
+    movw        I_BLOCKS(%bx), %si  # max num 512-byte blocks used for file
+    shrw        $1, %si             #   converted to 1024-byte blocks
+    cmpw        $MAX_BLOCKS, %si
+    ja          _load_fail
+    xorl        %edx, %edx
+_load_loop:
+    cmpw        %si, %dx
+    jae         _load_done
+    movw        I_BLOCK(%ebx, %edx, 4), %ax
+    cmpw        $0, %ax
+    je          _load_done
+    movb        $1, %cl
+    pushl       %edx
+    pushl       %ebx
+    call        read_blocks
+    popl        %ebx
+    popl        %edx
+    incw        %dx
+    addw        $BLOCK_SIZE, %di
+    jmp         _load_loop
+_load_done:
+    ret
+
+_load_fail:
+    leaw        s_filetoolarge, %si
+    jmp         fail
 
 
 ##
@@ -136,39 +182,8 @@ _strcmp_done:
     popw        %dx
     ret
 
-
-
-.globl print_hex
-print_hex:
-    pushl       %esi
-    pushw       %bx
-    pushw       %cx
-    movl        $5, %ecx
-    leal        s_hex, %esi
-_print_hex_loop:
-    movw        %ax, %bx
-    andb        $0x0F, %bl
-    cmpb        $9, %bl
-    ja          _print_hex_letter
-    addb        $0x30, %bl
-    jmp         _print_hex_char
-
-_print_hex_letter:
-    addb        $0x37, %bl
-
-_print_hex_char:
-    movb        %bl, (%esi, %ecx)
-    rorw        $4, %ax
-    decl        %ecx
-    cmpl        $1, %ecx
-    ja          _print_hex_loop
-    call        print
-    popw        %cx
-    popw        %bx
-    popl        %esi
-    ret
-
 ## ===== DATA =====
+.section .data2
 
 .align 16
 gdt_base:
@@ -183,6 +198,6 @@ d_gdt_ptr:
     .long       GDT_BASE
     .word       0           # padding
 
-s_hex:
-    .ascii      "0xXXXX"
-    .byte       13, 10, 0
+s_filetoolarge:
+    .ascii      "File is too large!"
+    .byte       0
