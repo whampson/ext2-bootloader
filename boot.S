@@ -142,7 +142,9 @@ _load_kernel:
     movl        %edx, d_kernelsize
     movw        I_BLOCKS(%bx), %si
     xorw        %dx, %dx
-    movw        $KERNEL_BASE, %di
+    movw        $KERNEL_BASE_SEG, %ax
+    movw        %ax, %es
+    movw        $KERNEL_BASE_OFF, %di
 _load_kernel_loop:
     cmpw        %si, %dx
     jae         _load_kernel_done
