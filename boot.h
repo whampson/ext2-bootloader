@@ -26,7 +26,7 @@
 #define KERNEL_BASE_OFF     0x0000
 #define KERNEL_BASE         ((KERNEL_BASE_SEG << 4) + KERNEL_BASE_OFF)
 
-#define KERNEL_STACK        0x40000     /* 256 KiB */
+#define KERNEL_STACK        0x80000     /* 512 KiB */
 
 #define KERNEL_CS           0x08
 #define KERNEL_DS           0x10
@@ -64,13 +64,11 @@
 #define INODE_COUNT         184
 #define INODE_SIZE          128
 #define INODE_BLOCKS        (INODE_COUNT / (BLOCK_SIZE / INODE_SIZE))
-#define MAX_BLOCKS          12
 
 #define ROOT_DENTRY_BASE    0x8800
 #define ROOT_DENTRY_INODE   2
 
 #define BLOCK_BUF           0x9000
-#define BLOCK_BUF2          0x9400
 
 /* struct ext2_super_block field offsets */
 #define S_LOG_BLOCK_SIZE    24
@@ -95,8 +93,5 @@
 /* ext2 i_block indices */
 #define EXT2_NDIR_BLOCKS    12                      /* number direct blocks */
 #define EXT2_IND_BLOCK      (EXT2_NDIR_BLOCKS)      /* single indirect block */
-#define EXT2_DIND_BLOCK     (EXT2_IND_BLOCK + 1)    /* double indirect block */
-#define EXT2_TIND_BLOCK     (EXT2_DIND_BLOCK + 1)   /* triple indirect block */
-#define EXT2_N_BLOCKS       (EXT2_TIND_BLOCK + 1)   /* total number blocks */
 
 #endif /* __BOOT_H */
