@@ -13,8 +13,8 @@
  *   File: boot.S
  * Author: Wes Hampson
  *   Desc: Stage 1 of the bootloader. Stage 1 is responsible for loading the
- *         kernel image into memory from the disk. It also contains some useful
- *         subroutines.
+ *         kernel image into memory from the disk. It also contains some
+ *         subroutines used throughout the booting process.
  *----------------------------------------------------------------------------*/
 
 #include "boot.h"
