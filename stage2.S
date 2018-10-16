@@ -112,31 +112,82 @@ load_file:
     popw        %di
     movw        I_BLOCKS(%bx), %si  # max num 512-byte blocks used for file
     shrw        $1, %si             #   converted to 1024-byte blocks
-    cmpw        $MAX_BLOCKS, %si
-    ja          _load_fail
     xorl        %edx, %edx
+
 _load_loop:
-    cmpw        %si, %dx
-    jae         _load_done
     movw        I_BLOCK(%ebx, %edx, 4), %ax
     cmpw        $0, %ax
     je          _load_done
+
+    cmpw        $EXT2_IND_BLOCK, %dx
+    je          _do_load_ind_blk
+    cmpw        $EXT2_DIND_BLOCK, %dx
+    je          _do_load_dind_blk
+    ja          _load_fail
+
+_do_load_dir_blk:
+    call        _load_dir_blk
+    jmp         _load_loop
+
+_do_load_ind_blk:
+    call        _load_ind_blk
+    jmp         _load_loop
+
+_do_load_dind_blk:
+    call        _load_dind_blk
+    jmp         _load_loop
+
+_load_dir_blk:
     movb        $1, %cl
-    pushl       %edx
-    pushl       %ebx
     call        read_blocks
-    popl        %ebx
-    popl        %edx
     incw        %dx
     addw        $BLOCK_SIZE, %di
-    jmp         _load_loop
-_load_done:
+    cmpw        $0, %di
+    jne         _load_dir_blk_done
+    movw        %es, %cx
+    addw        $0x1000, %cx
+    movw        %cx, %es
+
+_load_dir_blk_done:
     ret
 
+_load_ind_blk:
+    pushl       %ebx
+    pushl       %edx
+    pushw       %es
+    pushw       %di
+    xorw        %bx, %bx
+    movw        %bx, %es
+    movw        $BLOCK_BUF, %di
+    movb        $1, %cl
+    call        read_blocks
+    movzwl      %di, %ebx
+    popw        %di
+    popw        %es
+    xorl        %edx, %edx
+
+_load_ind_blk_loop:
+    cmpw        $256, %dx
+    jae         _load_ind_blk_done
+    movw        0(%ebx, %edx, 4), %ax
+    cmpw        $0, %ax
+    je          _load_ind_blk_done
+    call        _load_dir_blk
+    jmp         _load_ind_blk_loop
+
+_load_ind_blk_done:
+    popl        %edx
+    popl        %ebx
+    incw        %dx
+    ret
+
+_load_dind_blk:
 _load_fail:
     leaw        s_filetoolarge, %si
     jmp         fail
 
+_load_done:
+    ret
 
 ##
 # Compares two strings.
@@ -185,7 +236,6 @@ _strcmp_done:
 ## ===== DATA =====
 .section .data2
 
-.align 16
 gdt_base:
     .quad       0x0000000000000000  # (null entry)
     .quad       0x00CF9A000000FFFF  # KERNEL_CS = 0x08
