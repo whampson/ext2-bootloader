@@ -3,14 +3,16 @@ An ext2-compatible bootloader for i386 PCs.
 
 **Note: Only supports 1.44 MB floppies (3.5in).**
 
-## Overview
-  * Searches the disk for a kernel image by name
-  * Loads the image at a known address below 1 MiB
-  * Drops into a 32-bit kernel in Protected Mode
-      * GDT loaded at a well-known address
-      * inode table loaded at a well-known address
-      * Interrupts disabled on the PICs
-      * Access to all 4 GiB of address space in Protected Mode (ring 0)
+## Features
+  * Supports kernels up to 268 KiB in size
+  * Kernel loaded at a known address below 1 MiB
+  * Switches CPU into Protected Mode before calling the kernel
+
+#### Upon entry to the kernel
+  * GDT loaded at a well-known address
+      * All 4 GiB of address space accessible from ring 0
+  * Disk inode table loaded at a well-known address
+  * Interrupts disabled on the PICs
 
 ## Building
 First, we need to make an ext2 floppy image. This only needs to be done once.
@@ -51,8 +53,6 @@ over like you would any other file.
         $ mount /dev/fd0 /mnt
         $ cp kernel /mnt
         $ umount /mnt
-
-Or, more simply, run `./copy_kernel.sh`.
 
 
 **Happy booting! :-)**
