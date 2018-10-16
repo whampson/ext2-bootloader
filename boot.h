@@ -69,7 +69,8 @@
 #define ROOT_DENTRY_BASE    0x8800
 #define ROOT_DENTRY_INODE   2
 
-#define TMP_BUF             0x9000
+#define BLOCK_BUF           0x9000
+#define BLOCK_BUF2          0x9400
 
 /* struct ext2_super_block field offsets */
 #define S_LOG_BLOCK_SIZE    24
@@ -90,5 +91,12 @@
 #define NAME_LEN            6
 #define FILE_TYPE           7
 #define NAME                8
+
+/* ext2 i_block indices */
+#define EXT2_NDIR_BLOCKS    12                      /* number direct blocks */
+#define EXT2_IND_BLOCK      (EXT2_NDIR_BLOCKS)      /* single indirect block */
+#define EXT2_DIND_BLOCK     (EXT2_IND_BLOCK + 1)    /* double indirect block */
+#define EXT2_TIND_BLOCK     (EXT2_DIND_BLOCK + 1)   /* triple indirect block */
+#define EXT2_N_BLOCKS       (EXT2_TIND_BLOCK + 1)   /* total number blocks */
 
 #endif /* __BOOT_H */
