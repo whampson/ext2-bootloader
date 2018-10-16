@@ -107,12 +107,12 @@ _find_kernel:
     jae         filenotfound
     cmpw        $0, INODE(%bx)
     je          filenotfound
-    movw        $TMP_BUF, %di
+    movw        $BLOCK_BUF, %di
     leaw        NAME(%bx), %si
     movzbw      NAME_LEN(%bx), %cx
     rep         movsb
     movb        $0, 0(%di)
-    movw        $TMP_BUF, %si
+    movw        $BLOCK_BUF, %si
     leaw        s_kernelimg, %di
     call        strcmp
     cmpw        $0, %ax
@@ -168,12 +168,14 @@ _print_done:
 #           ax    - disk block index
 #           cl    - number of blocks to read
 #  Outputs: ax    - actual number of blocks read
-# Clobbers: bx, cx, dx
+# Clobbers: (none)
 ##
 .globl read_blocks
 read_blocks:
     # sect_count = block_count << (log_block_size + 1)
     # sect_start = 2 + ((block_start - 1) << (log_block_size + 1))
+    pushw       %cx
+    pushw       %dx
     cmpw        $0, %ax
     jle         badfs
     movb        %cl, %dl
@@ -185,6 +187,8 @@ read_blocks:
     movb        %dl, %cl
     call        read_sectors
     shrw        $1, %ax
+    popw        %dx
+    popw        %cx
     ret
 
 
@@ -195,11 +199,11 @@ read_blocks:
 #           ax    - disk sector base index (LBA)
 #           cl    - number of sectors to read
 #  Outputs: ax    - actual number of sectors read
-# Clobbers: bx, cx, dx
+# Clobbers: (none)
 ##
 .globl read_sectors
 read_sectors:
-    pushw       %si
+    pusha
     pushw       %cx                 # save count
     call        lba2chs
     popw        %ax                 # restore count (goes in %al)
@@ -212,8 +216,8 @@ _read_sectors_loop:
     movb        $BIOS_READ_DISK, %ah
     int         $0x13
     jc          _read_sectors_err
+    popa
     movzbw      %al, %ax
-    popw        %si
     ret
 
 _read_sectors_err:
@@ -263,6 +267,72 @@ lba2chs:
     popw        %dx                 # restore h
     ret
 
+##
+# Disables the keyboard.
+#
+#   Inputs: (none)
+#  Outputs: (none)
+# Clobbers: al
+##
+.globl i8042_disable
+i8042_disable:
+    call    i8042_out_delay
+    movb    $0xAD, %al
+    outb    %al, $0x64
+    ret
+
+##
+# Enables the keyboard.
+#
+#   Inputs: (none)
+#  Outputs: (none)
+# Clobbers: al
+##
+.globl i8042_enable
+i8042_enable:
+    call    i8042_out_delay
+    movb    $0xAE, %al
+    outb    %al, $0x64
+    ret
+
+##
+# Wait until i8042 input buffer is available for read.
+#
+#   Inputs: (none)
+#  Outputs: (none)
+# Clobbers: al
+##
+.globl i8042_in_delay
+i8042_in_delay:
+    call    i8042_delay
+    inb     $0x64, %al
+    testb   $0x01, %al
+    jz      i8042_in_delay
+    ret
+
+##
+# Wait until i8042 output buffer is available for write.
+#
+#   Inputs: (none)
+#  Outputs: (none)
+# Clobbers: al
+##
+.globl i8042_out_delay
+i8042_out_delay:
+    call    i8042_delay
+    inb     $0x64, %al
+    testb   $0x02, %al
+    jnz     i8042_out_delay
+    ret
+
+##
+# Delay for a bit.
+##
+.globl i8042_delay
+i8042_delay:
+    xorb    %al, %al
+    outb    %al, $0x80  # POST codes port, works well for delaying too!
+    ret
 
 ## ===== FAIL ROUTINES =====
 
