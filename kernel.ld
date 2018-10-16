@@ -20,7 +20,7 @@ ENTRY(kmain)
 
 SECTIONS
 {
-    __KERNEL_BASE = 0x20000;    /* KERNEL_BASE from boot.h */
+    __KERNEL_BASE = 0x10000;    /* KERNEL_BASE from boot.h */
 
     .text __KERNEL_BASE :
     {
