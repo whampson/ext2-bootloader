@@ -15,42 +15,59 @@
  *   Desc: A sample "kernel".
  *----------------------------------------------------------------------------*/
 
-#define VIDMEM  0xB8000
+#define FB_PTR      0xB8000     /* VGA framebuffer */
 
-void print(char *s)
-{
-    __asm__ volatile (
-        "                               \n\
-            movb        $0x0E, %%ah     \n\
-            xorw        %%bx, %%bx      \n\
-        .loop:                          \n\
-            movb        0(%0), %%al     \n\
-            cmpb        $0, %%al        \n\
-            je          .done           \n\
-            int         $0x10           \n\
-            incl        %0              \n\
-            jmp         .loop           \n\
-        .done:                          \n\
-        "
-        : /* no outputs */
-        : "r"(s)
-        : "eax", "ebx", "memory"
-    );
-}
+#define ROWS        25
+#define COLS        80
+#define SCREEN_AREA (ROWS * COLS)
+
+#define VGA_BLK     0x00
+#define VGA_BLU     0x01
+#define VGA_GRN     0x02
+#define VGA_CYN     0x03
+#define VGA_RED     0x04
+#define VGA_MGA     0x05
+#define VGA_BRN     0x06
+#define VGA_GRY     0x07
 
 void clear_screen(void)
 {
     char *vid_mem;
-    int i;
+    int i, k;
 
-    vid_mem = (char *) VIDMEM;
-    for (i = 0; i < 80 * 25; i++) {
-        vid_mem[i * 2] = '\0';
+    vid_mem = (char *) FB_PTR;
+    for (i = 0, k = 0; i < SCREEN_AREA; i++, k += 2) {
+        vid_mem[k] = '\0';
+        vid_mem[k + 1] = (VGA_BLU << 4) | VGA_GRY;
+    }
+}
+
+void print(char *s)
+{
+    char *vid_mem;
+    int i;
+    char c;
+
+    vid_mem = (char *) FB_PTR;
+    i = 0;
+
+    while ((c = *(s++)) != '\0') {
+        switch (c) {
+            case '\r':
+                i -= (i % COLS);
+                break;
+            case '\n':
+                i += COLS;
+                break;
+            default:
+                vid_mem[i << 1] = c;
+                i++;
+        }
     }
 }
 
 void kmain(void)
 {
     clear_screen();
-    /* print("Welcome to the 32-bit kernel! :-)\r\n"); */
+    print("Welcome to the 32-bit kernel! :-)\r\n");
 }
