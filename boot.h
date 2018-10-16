@@ -22,7 +22,7 @@
  * Important stuff for kernel developers.
  ******************************************/
 
-#define KERNEL_BASE_SEG     0x2000      /* 128 KiB */
+#define KERNEL_BASE_SEG     0x1000      /* 64 KiB */
 #define KERNEL_BASE_OFF     0x0000
 #define KERNEL_BASE         ((KERNEL_BASE_SEG << 4) + KERNEL_BASE_OFF)
 
@@ -31,7 +31,7 @@
 #define KERNEL_CS           0x08
 #define KERNEL_DS           0x10
 
-#define GDT_BASE            0x7000
+#define GDT_BASE            0xA000
 
 
 /*******************************************
