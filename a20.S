@@ -177,68 +177,6 @@ _a20_test_done:
     popw    %bx
     ret
 
-##
-# Disables the keyboard.
-#
-#   Inputs: (none)
-#  Outputs: (none)
-# Clobbers: al
-##
-i8042_disable:
-    call    i8042_out_delay
-    movb    $0xAD, %al
-    outb    %al, $0x64
-    ret
-
-##
-# Enables the keyboard.
-#
-#   Inputs: (none)
-#  Outputs: (none)
-# Clobbers: al
-##
-i8042_enable:
-    call    i8042_out_delay
-    movb    $0xAE, %al
-    outb    %al, $0x64
-    ret
-
-##
-# Wait until i8042 input buffer is available for read.
-#
-#   Inputs: (none)
-#  Outputs: (none)
-# Clobbers: al
-##
-i8042_in_delay:
-    call    i8042_delay
-    inb     $0x64, %al
-    testb   $0x01, %al
-    jz      i8042_in_delay
-    ret
-
-##
-# Wait until i8042 output buffer is available for write.
-#
-#   Inputs: (none)
-#  Outputs: (none)
-# Clobbers: al
-##
-i8042_out_delay:
-    call    i8042_delay
-    inb     $0x64, %al
-    testb   $0x02, %al
-    jnz     i8042_out_delay
-    ret
-
-##
-# Delay for a bit.
-##
-i8042_delay:
-    xorb    %al, %al
-    outb    %al, $0x80  # POST codes port, works well for delaying too!
-    ret
-
 
 ## ===== DATA =====
 .section .data2
