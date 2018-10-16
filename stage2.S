@@ -14,7 +14,7 @@
  * Author: Wes Hampson
  *   Desc: Stage 2 of the bootloader. Stage 1 is responsible for getting the
  *         CPU into Protected Mode and calling the kernel. It also contains some
- *         useful subroutines.
+ *         subroutines used throughout the booting process.
  *----------------------------------------------------------------------------*/
 
 #include "boot.h"
@@ -121,8 +121,6 @@ _load_loop:
 
     cmpw        $EXT2_IND_BLOCK, %dx
     je          _do_load_ind_blk
-    cmpw        $EXT2_DIND_BLOCK, %dx
-    je          _do_load_dind_blk
     ja          _load_fail
 
 _do_load_dir_blk:
@@ -131,10 +129,6 @@ _do_load_dir_blk:
 
 _do_load_ind_blk:
     call        _load_ind_blk
-    jmp         _load_loop
-
-_do_load_dind_blk:
-    call        _load_dind_blk
     jmp         _load_loop
 
 _load_dir_blk:
@@ -181,7 +175,6 @@ _load_ind_blk_done:
     incw        %dx
     ret
 
-_load_dind_blk:
 _load_fail:
     leaw        s_filetoolarge, %si
     jmp         fail
