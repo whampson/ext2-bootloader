@@ -4,7 +4,7 @@ An ext2-compatible bootloader for i386 PCs.
 **Note: Only supports 1.44 MB floppies (3.5in).**
 
 ## Features
-  * Supports kernels up to 268 KiB in size
+  * Supports 32-bit kernels up to 268 KiB in size
   * Kernel loaded at a known address below 1 MiB
   * Switches CPU into Protected Mode before calling the kernel
 
