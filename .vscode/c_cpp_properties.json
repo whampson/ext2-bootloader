@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "name": "ext2-bootloader",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [],
+            "cStandard": "c99",
+            "intelliSenseMode": "clang-x64"
+        }
+    ],
+    "version": 4
+}
