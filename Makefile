@@ -26,9 +26,9 @@ GCC_WARNINGS    := -Wall -Wextra -Wpedantic
 AS              := gcc
 AFLAGS          := $(GCC_WARNINGS) -D__ASM -g -m32
 CC              := gcc
-CFLAGS          := $(GCC_WARNINGS) -g -Og -m32 -ffreestanding -nostdinc \
-                   -fno-unwind-tables -fno-asynchronous-unwind-tables   \
-                   -fno-stack-protector -fno-pic
+CFLAGS          := $(GCC_WARNINGS) -g -Og -m32 -std=c99 -ffreestanding         \
+                   -nostdinc -fno-pic -fno-stack-protector -fno-unwind-tables  \
+                   -fno-asynchronous-unwind-tables
 LD              := ld
 LFLAGS          :=
 
