@@ -1,18 +1,37 @@
 # ext2-bootloader
-An ext2-compatible bootloader for i386 PCs.
+A bootloader for i386 PCs that supports ext2 disks.
 
-**Note: Only supports 1.44 MB floppies (3.5in).**
-
-## Features
+## Overview
+### Features
+  * Compatible with 1.44 MB floppy disks
   * Supports 32-bit kernels up to 268 KiB in size
-  * Kernel loaded at a known address below 1 MiB
-  * Switches CPU into Protected Mode before calling the kernel
+  * Kernel loaded at a well-known address below 1 MiB
 
 #### Upon entry to the kernel
+  * CPU is running in 32-bit Protected Mode
   * GDT loaded at a well-known address
       * All 4 GiB of address space accessible from ring 0
-  * Disk inode table loaded at a well-known address
-  * Interrupts disabled on the PICs
+  * Interrupts disabled via the PICs
+
+### Memory Map
+The following is the memory layout upon entry to the kernel.
+
+                | Free memory           |  Free to use
+        100000  +-----------------------+
+                | Reserved for hardware |  Use with caution
+        0A0000  +-----------------------+
+                | Reserved for BIOS     |  Do not use (BIOS EBDA)
+        09FC00  +-----------------------+
+                | Kernel                |  Kernel code and data
+        010000  +-----------------------+
+                | GDT                   |  Global Descriptor Table
+        00A000  +-----------------------+
+                | Bootloader            |  <-- Bootsector entry point at 0x7C00
+        001000  +-----------------------+
+                | Reserved for BIOS     |  Do not use
+        000400  +-----------------------+
+                | Real Mode IVT         |  Do not use
+        000000  +-----------------------+
 
 ## Building
 First, we need to make an ext2 floppy image. This only needs to be done once.
@@ -27,7 +46,6 @@ You can also build the kernel and bootloader separately.
 
         $ make bootldr
         $ make kernel
-
 
 ## QEMU Instructions
 Run the following command to boot the disk image with QEMU.
