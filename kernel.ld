@@ -20,11 +20,11 @@ ENTRY(kmain)
 
 SECTIONS
 {
-    __KERNEL_START = 0x20000;        /* KERNEL_BASE from boot.h */
+    __KERNEL_BASE = 0x20000;    /* KERNEL_BASE from boot.h */
 
-    .text __KERNEL_START :
+    .text __KERNEL_BASE :
     {
-        LONG(kmain)     /* kernel entry point, needed for indirect jump */
+        LONG(kmain)             /* entry point address */
         *(.text*)
     }
 
@@ -38,11 +38,10 @@ SECTIONS
         *(.bss*)
     }
 
-    __KERNEL_SIZE = .;
-
     .rodata :
     {
-        . = __KERNEL_START + (266 * 1024) - __KERNEL_SIZE;
         *(.rodata*)
     }
+
+    __KERNEL_SIZE = .;
 }
